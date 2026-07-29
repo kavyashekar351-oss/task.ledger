@@ -3,13 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Task Ledger</title>
+<title>KavyBloom</title>
 <meta name="theme-color" content="#EFF1EA">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Task Ledger">
+<meta name="apple-mobile-web-app-title" content="KavyBloom">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='16' fill='%232F3A2A'/%3E%3Cpath d='M25 50l15 15 35-35' stroke='%23EFF1EA' stroke-width='10' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
@@ -33,16 +36,31 @@
 
   #ledger-root {
     font-family: 'IBM Plex Mono', monospace;
-    background: var(--paper);
     color: var(--ink);
     min-height: 100vh;
     max-width: 480px;
     margin: 0 auto;
     padding: 0 0 110px 0;
     position: relative;
-    background-image: linear-gradient(var(--line) 1px, transparent 1px);
-    background-size: 100% 40px;
-    background-attachment: local;
+  }
+
+  #ledger-root::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    background: url('background.jpg') center 20% / cover no-repeat;
+    z-index: -2;
+  }
+  #ledger-root::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    background: linear-gradient(180deg, rgba(239,241,234,0.88) 0%, rgba(239,241,234,0.93) 40%, rgba(239,241,234,0.96) 100%);
+    z-index: -1;
   }
 
   .lg-header {
@@ -71,6 +89,17 @@
   .lg-tabs { display: flex; gap: 4px; margin-top: 16px; overflow-x: auto; }
   .lg-tab { font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 6px 12px; border: 1px solid var(--rule); background: var(--paper-raised); color: var(--ink-soft); cursor: pointer; white-space: nowrap; border-radius: 2px; }
   .lg-tab.active { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+
+  .lg-search-wrap { position: relative; margin-top: 10px; }
+  .lg-search {
+    width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 13px; padding: 9px 32px 9px 12px;
+    border: 1px solid var(--rule); border-radius: 4px; background: var(--paper-raised); color: var(--ink);
+  }
+  .lg-search::placeholder { color: var(--ink-soft); }
+  .lg-search-clear {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer;
+    color: var(--ink-soft); font-size: 13px;
+  }
 
   .lg-notif-banner {
     margin: 12px 4px 0 4px;
@@ -131,6 +160,9 @@
 
   .lg-del { flex-shrink: 0; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; color: var(--ink-soft); cursor: pointer; font-size: 15px; opacity: 0.5; }
   .lg-del:hover { opacity: 1; color: var(--high); }
+  .lg-edit-icon { flex-shrink: 0; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; color: var(--ink-soft); cursor: pointer; font-size: 14px; opacity: 0.5; }
+  .lg-edit-icon:hover { opacity: 1; color: var(--accent); }
+  .lg-actions-col { display: flex; flex-direction: column; gap: 6px; align-items: center; margin-top: 2px; }
 
   .lg-fab-wrap { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); width: min(448px, calc(100% - 32px)); z-index: 10; display: flex; gap: 8px; }
   .lg-fab-btn { flex: 1; background: var(--accent); color: var(--paper); border: none; font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 14px; padding: 14px; border-radius: 4px; cursor: pointer; box-shadow: 0 4px 14px rgba(34,38,29,0.25); letter-spacing: 0.02em; }
@@ -142,8 +174,8 @@
   .lg-mic-btn.listening { animation: pulse 1s infinite; background: var(--high); }
   @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(158,43,37,0.5);} 50% { box-shadow: 0 0 0 10px rgba(158,43,37,0);} }
 
-  .lg-overlay { position: fixed; inset: 0; background: rgba(34,38,29,0.4); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
-  .lg-sheet { background: var(--paper-raised); width: 100%; max-width: 480px; border-radius: 12px 12px 0 0; padding: 20px 20px 24px 20px; max-height: 88vh; overflow-y: auto; }
+  .lg-overlay { position: fixed; inset: 0; background: rgba(34,38,29,0.45); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+  .lg-sheet { background: var(--paper-raised); width: 100%; max-width: 480px; border-radius: 12px 12px 0 0; padding: 20px 20px 24px 20px; max-height: 88vh; overflow-y: auto; box-shadow: 0 -8px 30px rgba(0,0,0,0.25); }
   .lg-sheet-title { font-family: 'Source Serif 4', serif; font-size: 20px; font-weight: 600; margin: 0 0 16px 0; }
   .lg-field { margin-bottom: 14px; }
   .lg-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); display: block; margin-bottom: 6px; }
@@ -182,7 +214,7 @@
 <div id="ledger-root">
   <div class="lg-header">
     <div class="lg-title-row">
-      <h1 class="lg-title">Task Ledger</h1>
+      <h1 class="lg-title">KavyBloom</h1>
     </div>
     <div class="lg-date" id="lg-date"></div>
     <div class="lg-tally">
@@ -194,6 +226,10 @@
       <div class="lg-tab" data-filter="upcoming">Upcoming</div>
       <div class="lg-tab" data-filter="all">All</div>
       <div class="lg-tab" data-filter="done">Done</div>
+    </div>
+    <div class="lg-search-wrap">
+      <input class="lg-search" id="lg-search" type="text" placeholder="Search tasks..." />
+      <span class="lg-search-clear" id="lg-search-clear" style="display:none;">&#10005;</span>
     </div>
     <div class="lg-notif-banner" id="lg-notif-banner" style="display:none;">
       <span>Turn on notifications so reminders can alert you.</span>
@@ -226,12 +262,56 @@
 
   let tasks = [];
   let filter = 'today';
+  let searchQuery = '';
+  const searchInput = document.getElementById('lg-search');
+  const searchClear = document.getElementById('lg-search-clear');
   const STORAGE_KEY = 'ledger-tasks-v2';
   const CATS = ['Health', 'Study', 'Personal', 'Project', 'Errand'];
 
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   const speechSupported = !!SpeechRec;
   if (!speechSupported) voiceBtn.style.display = 'none';
+
+  // ---------- In-app reminder tone ----------
+  let audioCtx = null;
+  function unlockAudio() {
+    if (!audioCtx) {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { return; }
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  let audioUnlockedNotified = false;
+  function unlockAudioAndNotify() {
+    unlockAudio();
+    if (!audioUnlockedNotified && audioCtx && audioCtx.state === 'running') {
+      audioUnlockedNotified = true;
+    }
+  }
+  document.addEventListener('click', unlockAudioAndNotify, { once: false });
+  document.addEventListener('touchstart', unlockAudioAndNotify, { once: false });
+
+  function playReminderTone() {
+    if (!audioCtx) unlockAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const notes = [523.25, 659.25, 783.99]; // C5, E5, G5 — a little rising chime
+    notes.forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const start = now + i * 0.16;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.25, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(start);
+      osc.stop(start + 0.4);
+    });
+    if (navigator.vibrate) navigator.vibrate([180, 80, 180]);
+  }
 
   function uid() { return 't' + Date.now() + Math.random().toString(36).slice(2, 7); }
   function todayStr() { return new Date().toISOString().slice(0, 10); }
@@ -289,10 +369,19 @@
   function filteredTasks() {
     const today = todayStr();
     let list = tasks.slice();
-    if (filter === 'today') list = list.filter(t => !t.done && (!t.due || t.due <= today));
-    else if (filter === 'upcoming') list = list.filter(t => !t.done && t.due && t.due > today);
-    else if (filter === 'done') list = list.filter(t => t.done);
-    // 'all' = everything
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter(t =>
+        t.title.toLowerCase().includes(q) ||
+        (t.notes && t.notes.toLowerCase().includes(q)) ||
+        t.category.toLowerCase().includes(q)
+      );
+    } else {
+      if (filter === 'today') list = list.filter(t => !t.done && (!t.due || t.due <= today));
+      else if (filter === 'upcoming') list = list.filter(t => !t.done && t.due && t.due > today);
+      else if (filter === 'done') list = list.filter(t => t.done);
+      // 'all' = everything
+    }
 
     list.sort((a, b) => {
       if (a.done !== b.done) return a.done ? 1 : -1;
@@ -340,6 +429,10 @@
 
     listEl.innerHTML = '';
     if (list.length === 0) {
+      if (searchQuery.trim()) {
+        listEl.innerHTML = '<div class="lg-empty"><div class="lg-empty-mark">&mdash;</div>No tasks match "' + escapeHtml(searchQuery.trim()) + '"</div>';
+        return;
+      }
       const emptyMsgs = {
         today: 'Nothing on the books for today.',
         upcoming: 'Nothing scheduled ahead yet.',
@@ -364,7 +457,10 @@
             remindLabel(t.remindAt) +
           '</div>' +
         '</div>' +
-        '<div class="lg-del" data-id="' + t.id + '" data-action="delete">&#10005;</div>';
+        '<div class="lg-actions-col">' +
+          '<div class="lg-edit-icon" data-id="' + t.id + '" data-action="edit" title="Edit">&#9998;</div>' +
+          '<div class="lg-del" data-id="' + t.id + '" data-action="delete" title="Delete">&#10005;</div>' +
+        '</div>';
       listEl.appendChild(item);
     });
   }
@@ -385,6 +481,20 @@
     filter = tab.dataset.filter;
     document.querySelectorAll('.lg-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
+    render();
+  });
+
+  searchInput.addEventListener('input', () => {
+    searchQuery = searchInput.value;
+    searchClear.style.display = searchQuery ? 'block' : 'none';
+    tabsEl.style.opacity = searchQuery ? '0.4' : '1';
+    render();
+  });
+  searchClear.addEventListener('click', () => {
+    searchQuery = '';
+    searchInput.value = '';
+    searchClear.style.display = 'none';
+    tabsEl.style.opacity = '1';
     render();
   });
 
@@ -564,6 +674,7 @@
       if (remindTime <= now) {
         t.reminded = true;
         changed = true;
+        playReminderTone();
         if ('Notification' in window && Notification.permission === 'granted') {
           try {
             new Notification('Task reminder', { body: t.title, icon: undefined });
