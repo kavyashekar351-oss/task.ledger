@@ -1,20 +1,783 @@
-{
-  "name": "KavyBloom",
-  "short_name": "KavyBloom",
-  "start_url": "./index.html",
-  "display": "standalone",
-  "background_color": "#EFF1EA",
-  "theme_color": "#EFF1EA",
-  "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>KavyBloom</title>
+<meta name="theme-color" content="#EFF1EA">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="KavyBloom">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --paper: #EFF1EA;
+    --paper-raised: #F8F9F5;
+    --ink: #22261D;
+    --ink-soft: #5B6157;
+    --line: #D8DBCE;
+    --rule: #C7CBB9;
+    --high: #9E2B25;
+    --med: #A9721F;
+    --low: #4C6B47;
+    --accent: #2F3A2A;
+    --done: #8B9182;
+    --mic: #6B4C9A;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #EFF1EA; }
+
+  #ledger-root {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--ink);
+    min-height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 0 110px 0;
+    position: relative;
+  }
+
+  #ledger-root::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    background: url('background.jpg') center 20% / cover no-repeat;
+    z-index: -2;
+  }
+  #ledger-root::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    background: linear-gradient(180deg, rgba(239,241,234,0.88) 0%, rgba(239,241,234,0.93) 40%, rgba(239,241,234,0.96) 100%);
+    z-index: -1;
+  }
+
+  .lg-header {
+    padding: 24px 20px 14px 20px;
+    background: var(--paper);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .lg-title-row { display: flex; align-items: baseline; justify-content: space-between; }
+  .lg-title {
+    font-family: 'Source Serif 4', serif;
+    font-weight: 600;
+    font-size: 27px;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .lg-date { font-size: 12px; color: var(--ink-soft); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+  .lg-tally { margin-top: 14px; font-size: 13px; color: var(--ink-soft); display: flex; align-items: center; gap: 10px; }
+  .lg-tally-bar { flex: 1; height: 3px; background: var(--line); position: relative; overflow: hidden; }
+  .lg-tally-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); transition: width 0.4s ease; }
+
+  .lg-tabs { display: flex; gap: 4px; margin-top: 16px; overflow-x: auto; }
+  .lg-tab { font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 6px 12px; border: 1px solid var(--rule); background: var(--paper-raised); color: var(--ink-soft); cursor: pointer; white-space: nowrap; border-radius: 2px; }
+  .lg-tab.active { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+
+  .lg-search-wrap { position: relative; margin-top: 10px; }
+  .lg-search {
+    width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 13px; padding: 9px 32px 9px 12px;
+    border: 1px solid var(--rule); border-radius: 4px; background: var(--paper-raised); color: var(--ink);
+  }
+  .lg-search::placeholder { color: var(--ink-soft); }
+  .lg-search-clear {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer;
+    color: var(--ink-soft); font-size: 13px;
+  }
+
+  .lg-sound-row { margin-top: 8px; }
+  .lg-sound-btn {
+    width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; padding: 8px;
+    border: 1px solid var(--rule); border-radius: 4px; background: var(--paper-raised); color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .lg-sound-btn.armed { background: var(--low); color: var(--paper); border-color: var(--low); }
+
+  .lg-notif-banner {
+    margin: 12px 4px 0 4px;
+    padding: 10px 12px;
+    background: #FBF2DC;
+    border: 1px solid var(--med);
+    border-radius: 4px;
+    font-size: 11.5px;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .lg-notif-banner button {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--med);
+    color: var(--paper);
+    border: none;
+    padding: 6px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .lg-list { padding: 8px 16px 20px 16px; }
+
+  .lg-empty { text-align: center; padding: 60px 20px; color: var(--ink-soft); font-size: 13px; line-height: 1.6; }
+  .lg-empty-mark { font-family: 'Source Serif 4', serif; font-size: 32px; color: var(--rule); margin-bottom: 8px; }
+
+  .lg-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 6px; border-bottom: 1px dashed var(--rule); position: relative; }
+
+  .lg-check { flex-shrink: 0; width: 20px; height: 20px; margin-top: 2px; border: 1.5px solid var(--ink-soft); border-radius: 3px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--paper-raised); }
+  .lg-check svg { opacity: 0; transform: scale(0.5) rotate(-10deg); transition: all 0.18s ease; }
+  .lg-item.done .lg-check { background: var(--accent); border-color: var(--accent); }
+  .lg-item.done .lg-check svg { opacity: 1; transform: scale(1) rotate(-4deg); stroke: var(--paper); }
+
+  .lg-body { flex: 1; min-width: 0; cursor: pointer; }
+  .lg-item-title { font-size: 14.5px; line-height: 1.4; word-break: break-word; position: relative; }
+  .lg-item.done .lg-item-title { color: var(--done); }
+  .lg-item.done .lg-item-title::after {
+    content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1.5px; background: var(--high);
+    transform: scaleX(0); transform-origin: left; animation: strike 0.3s ease forwards;
+  }
+  @keyframes strike { to { transform: scaleX(1); } }
+
+  .lg-meta { display: flex; gap: 6px; align-items: center; margin-top: 5px; flex-wrap: wrap; }
+  .lg-chip { font-size: 10.5px; padding: 1px 6px; border-radius: 2px; border: 1px solid var(--rule); color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
+  .lg-chip.pri-high { color: var(--high); border-color: var(--high); }
+  .lg-chip.pri-med { color: var(--med); border-color: var(--med); }
+  .lg-chip.pri-low { color: var(--low); border-color: var(--low); }
+  .lg-chip.cat-health { color: #1F6F6F; border-color: #1F6F6F; }
+  .lg-due { font-size: 10.5px; color: var(--ink-soft); }
+  .lg-due.overdue { color: var(--high); font-weight: 600; }
+  .lg-remind { font-size: 10.5px; color: var(--mic); display: inline-flex; align-items: center; gap: 3px; }
+
+  .lg-del { flex-shrink: 0; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; color: var(--ink-soft); cursor: pointer; font-size: 15px; opacity: 0.5; }
+  .lg-del:hover { opacity: 1; color: var(--high); }
+  .lg-edit-icon { flex-shrink: 0; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; color: var(--ink-soft); cursor: pointer; font-size: 14px; opacity: 0.5; }
+  .lg-edit-icon:hover { opacity: 1; color: var(--accent); }
+  .lg-actions-col { display: flex; flex-direction: column; gap: 6px; align-items: center; margin-top: 2px; }
+
+  .lg-fab-wrap { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); width: min(448px, calc(100% - 32px)); z-index: 10; display: flex; gap: 8px; }
+  .lg-fab-btn { flex: 1; background: var(--accent); color: var(--paper); border: none; font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 14px; padding: 14px; border-radius: 4px; cursor: pointer; box-shadow: 0 4px 14px rgba(34,38,29,0.25); letter-spacing: 0.02em; }
+  .lg-fab-btn:active { transform: scale(0.98); }
+  .lg-mic-btn {
+    width: 52px; flex-shrink: 0; background: var(--mic); color: var(--paper); border: none; border-radius: 4px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(34,38,29,0.25); font-size: 18px;
+  }
+  .lg-mic-btn.listening { animation: pulse 1s infinite; background: var(--high); }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(158,43,37,0.5);} 50% { box-shadow: 0 0 0 10px rgba(158,43,37,0);} }
+
+  .lg-overlay { position: fixed; inset: 0; background: rgba(34,38,29,0.45); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+  .lg-sheet { background: var(--paper-raised); width: 100%; max-width: 480px; border-radius: 12px 12px 0 0; padding: 20px 20px 24px 20px; max-height: 88vh; overflow-y: auto; box-shadow: 0 -8px 30px rgba(0,0,0,0.25); }
+  .lg-sheet-title { font-family: 'Source Serif 4', serif; font-size: 20px; font-weight: 600; margin: 0 0 16px 0; }
+  .lg-field { margin-bottom: 14px; }
+  .lg-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); display: block; margin-bottom: 6px; }
+  .lg-input, .lg-select, .lg-textarea { width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 14px; padding: 10px; border: 1px solid var(--rule); border-radius: 4px; background: var(--paper); color: var(--ink); }
+  .lg-textarea { resize: vertical; min-height: 50px; }
+  .lg-row { display: flex; gap: 10px; }
+  .lg-row .lg-field { flex: 1; }
+  .lg-input-with-mic { display: flex; gap: 6px; }
+  .lg-input-with-mic .lg-input { flex: 1; }
+  .lg-mic-inline {
+    width: 40px; flex-shrink: 0; border: 1px solid var(--rule); background: var(--paper-raised); border-radius: 4px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--mic);
+  }
+  .lg-mic-inline.listening { background: var(--mic); color: var(--paper); }
+
+  .lg-pri-group, .lg-cat-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .lg-pri-opt, .lg-cat-opt { flex: 1; min-width: 60px; text-align: center; padding: 8px 4px; border: 1px solid var(--rule); border-radius: 4px; font-size: 11.5px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-soft); }
+  .lg-pri-opt.sel-high { background: var(--high); color: var(--paper); border-color: var(--high); }
+  .lg-pri-opt.sel-med { background: var(--med); color: var(--paper); border-color: var(--med); }
+  .lg-pri-opt.sel-low { background: var(--low); color: var(--paper); border-color: var(--low); }
+  .lg-cat-opt.selected { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+
+  .lg-sheet-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .lg-btn-cancel, .lg-btn-save { flex: 1; padding: 12px; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 13px; cursor: pointer; border: 1px solid var(--rule); }
+  .lg-btn-cancel { background: transparent; color: var(--ink-soft); }
+  .lg-btn-save { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+
+  .lg-toast { position: fixed; bottom: 92px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--paper); font-size: 12px; padding: 8px 16px; border-radius: 20px; z-index: 30; opacity: 0; transition: opacity 0.25s ease; pointer-events: none; max-width: 90%; text-align: center; }
+  .lg-toast.show { opacity: 1; }
+
+  .lg-hint { font-size: 10.5px; color: var(--ink-soft); margin-top: 4px; line-height: 1.5; }
+
+  .lg-alarm-overlay {
+    position: fixed; inset: 0; background: rgba(20,22,16,0.92); z-index: 50;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .lg-alarm-card {
+    background: var(--paper-raised); border-radius: 16px; padding: 36px 28px; text-align: center;
+    max-width: 360px; width: 100%; box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .lg-alarm-bell { font-size: 44px; animation: alarm-shake 0.6s infinite; }
+  @keyframes alarm-shake {
+    0%, 100% { transform: rotate(0deg); }
+    20% { transform: rotate(-12deg); }
+    40% { transform: rotate(10deg); }
+    60% { transform: rotate(-8deg); }
+    80% { transform: rotate(6deg); }
+  }
+  .lg-alarm-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-soft); margin-top: 14px; }
+  .lg-alarm-title { font-family: 'Source Serif 4', serif; font-size: 22px; font-weight: 600; margin-top: 8px; line-height: 1.3; }
+  .lg-alarm-actions { display: flex; gap: 10px; margin-top: 28px; }
+  .lg-alarm-snooze, .lg-alarm-stop {
+    flex: 1; padding: 13px; border-radius: 8px; font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 13px; cursor: pointer; border: none;
+  }
+  .lg-alarm-snooze { background: var(--paper); color: var(--ink); border: 1px solid var(--rule); }
+  .lg-alarm-stop { background: var(--high); color: var(--paper); }
+</style>
+</head>
+<body>
+
+<div id="ledger-root">
+  <div class="lg-header">
+    <div class="lg-title-row">
+      <h1 class="lg-title">KavyBloom</h1>
+    </div>
+    <div class="lg-date" id="lg-date"></div>
+    <div class="lg-tally">
+      <span id="lg-tally-text">0 of 0 crossed off</span>
+      <div class="lg-tally-bar"><div class="lg-tally-fill" id="lg-tally-fill" style="width:0%"></div></div>
+    </div>
+    <div class="lg-tabs" id="lg-tabs">
+      <div class="lg-tab active" data-filter="today">Today</div>
+      <div class="lg-tab" data-filter="upcoming">Upcoming</div>
+      <div class="lg-tab" data-filter="all">All</div>
+      <div class="lg-tab" data-filter="done">Done</div>
+    </div>
+    <div class="lg-search-wrap">
+      <input class="lg-search" id="lg-search" type="text" placeholder="Search tasks..." />
+      <span class="lg-search-clear" id="lg-search-clear" style="display:none;">&#10005;</span>
+    </div>
+    <div class="lg-sound-row">
+      <button class="lg-sound-btn" id="lg-sound-btn">&#128264; Tap to enable reminder sound</button>
+    </div>
+    <div class="lg-notif-banner" id="lg-notif-banner" style="display:none;">
+      <span>Turn on notifications so reminders can alert you.</span>
+      <button id="lg-notif-enable">Enable</button>
+    </div>
+  </div>
+
+  <div class="lg-list" id="lg-list"></div>
+
+  <div class="lg-fab-wrap">
+    <button class="lg-mic-btn" id="lg-voice-btn" title="Voice command">&#127908;</button>
+    <button class="lg-fab-btn" id="lg-add-btn">+ Add task</button>
+  </div>
+</div>
+
+<div class="lg-toast" id="lg-toast"></div>
+
+<script>
+(function() {
+  const listEl = document.getElementById('lg-list');
+  const tabsEl = document.getElementById('lg-tabs');
+  const dateEl = document.getElementById('lg-date');
+  const tallyText = document.getElementById('lg-tally-text');
+  const tallyFill = document.getElementById('lg-tally-fill');
+  const addBtn = document.getElementById('lg-add-btn');
+  const voiceBtn = document.getElementById('lg-voice-btn');
+  const toastEl = document.getElementById('lg-toast');
+  const notifBanner = document.getElementById('lg-notif-banner');
+  const notifEnableBtn = document.getElementById('lg-notif-enable');
+
+  let tasks = [];
+  let filter = 'today';
+  let searchQuery = '';
+  const searchInput = document.getElementById('lg-search');
+  const searchClear = document.getElementById('lg-search-clear');
+  const STORAGE_KEY = 'ledger-tasks-v2';
+  const CATS = ['Health', 'Study', 'Personal', 'Project', 'Errand'];
+
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const speechSupported = !!SpeechRec;
+  if (!speechSupported) voiceBtn.style.display = 'none';
+
+  // ---------- In-app reminder tone ----------
+  let audioCtx = null;
+  function unlockAudio() {
+    if (!audioCtx) {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { return; }
     }
-  ]
-}
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  let audioUnlockedNotified = false;
+  function unlockAudioAndNotify() {
+    unlockAudio();
+    if (!audioUnlockedNotified && audioCtx && audioCtx.state === 'running') {
+      audioUnlockedNotified = true;
+    }
+  }
+  document.addEventListener('click', unlockAudioAndNotify, { once: false });
+  document.addEventListener('touchstart', unlockAudioAndNotify, { once: false });
+
+  const soundBtn = document.getElementById('lg-sound-btn');
+  soundBtn.addEventListener('click', () => {
+    unlockAudio();
+    playReminderTone();
+    soundBtn.textContent = '\u2705 Reminder sound is on';
+    soundBtn.classList.add('armed');
+    requestNotifPermission();
+  });
+
+  function playReminderTone() {
+    if (!audioCtx) unlockAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const notes = [880, 659.25, 880, 659.25]; // urgent alternating beep, like an alarm
+    notes.forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = freq;
+      const start = now + i * 0.18;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.35, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.16);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(start);
+      osc.stop(start + 0.17);
+    });
+    if (navigator.vibrate) navigator.vibrate([180, 80, 180]);
+  }
+
+  function uid() { return 't' + Date.now() + Math.random().toString(36).slice(2, 7); }
+  function todayStr() { return new Date().toISOString().slice(0, 10); }
+  function fmtDate() { return new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }); }
+  dateEl.textContent = fmtDate();
+
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toastEl.classList.remove('show'), 2200);
+  }
+
+  function loadTasks() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      tasks = raw ? JSON.parse(raw) : [];
+    } catch (e) { tasks = []; }
+    render();
+  }
+  function saveTasks() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
+    catch (e) { showToast('Could not save on this device'); }
+  }
+
+  function addTask(data) {
+    tasks.unshift({
+      id: uid(), title: data.title, notes: data.notes || '', category: data.category,
+      priority: data.priority, due: data.due || '', remindAt: data.remindAt || '',
+      reminded: false, done: false, createdAt: Date.now()
+    });
+    saveTasks(); render();
+  }
+  function updateTask(id, data) {
+    const t = tasks.find(x => x.id === id);
+    if (!t) return;
+    if (data.remindAt !== t.remindAt) t.reminded = false;
+    Object.assign(t, data);
+    saveTasks(); render();
+  }
+  function toggleDone(id) {
+    const t = tasks.find(x => x.id === id);
+    if (!t) return;
+    t.done = !t.done;
+    saveTasks(); render();
+  }
+  function deleteTask(id) {
+    tasks = tasks.filter(x => x.id !== id);
+    saveTasks(); render();
+  }
+
+  function priorityRank(p) { return p === 'high' ? 0 : p === 'med' ? 1 : 2; }
+  function isOverdue(t) { return t.due && t.due < todayStr() && !t.done; }
+
+  function filteredTasks() {
+    const today = todayStr();
+    let list = tasks.slice();
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter(t =>
+        t.title.toLowerCase().includes(q) ||
+        (t.notes && t.notes.toLowerCase().includes(q)) ||
+        t.category.toLowerCase().includes(q)
+      );
+    } else {
+      if (filter === 'today') list = list.filter(t => !t.done && (!t.due || t.due <= today));
+      else if (filter === 'upcoming') list = list.filter(t => !t.done && t.due && t.due > today);
+      else if (filter === 'done') list = list.filter(t => t.done);
+      // 'all' = everything
+    }
+
+    list.sort((a, b) => {
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      const ao = isOverdue(a), bo = isOverdue(b);
+      if (ao !== bo) return ao ? -1 : 1;
+      if (priorityRank(a.priority) !== priorityRank(b.priority)) return priorityRank(a.priority) - priorityRank(b.priority);
+      if (a.due && b.due) return a.due < b.due ? -1 : 1;
+      if (a.due) return -1;
+      if (b.due) return 1;
+      return b.createdAt - a.createdAt;
+    });
+    return list;
+  }
+
+  function checkIcon() {
+    return '<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5L4.5 8.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
+  function dueLabel(due, done) {
+    if (!due) return '';
+    const today = todayStr();
+    const overdue = due < today && !done;
+    let label = due;
+    if (due === today) label = 'Today';
+    else { const d = new Date(due + 'T00:00:00'); label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+    return '<span class="lg-due' + (overdue ? ' overdue' : '') + '">' + (overdue ? 'Overdue &middot; ' : '') + label + '</span>';
+  }
+
+  function remindLabel(remindAt) {
+    if (!remindAt) return '';
+    const d = new Date(remindAt);
+    const label = d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return '<span class="lg-remind">&#128276; ' + label + '</span>';
+  }
+
+  function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function catClass(cat) { return 'cat-' + cat.toLowerCase(); }
+
+  function render() {
+    const list = filteredTasks();
+    const totalActive = tasks.length;
+    const doneCount = tasks.filter(t => t.done).length;
+    tallyText.textContent = doneCount + ' of ' + totalActive + ' crossed off';
+    tallyFill.style.width = totalActive ? Math.round((doneCount / totalActive) * 100) + '%' : '0%';
+
+    listEl.innerHTML = '';
+    if (list.length === 0) {
+      if (searchQuery.trim()) {
+        listEl.innerHTML = '<div class="lg-empty"><div class="lg-empty-mark">&mdash;</div>No tasks match "' + escapeHtml(searchQuery.trim()) + '"</div>';
+        return;
+      }
+      const emptyMsgs = {
+        today: 'Nothing on the books for today.',
+        upcoming: 'Nothing scheduled ahead yet.',
+        done: 'Nothing crossed off yet.',
+        all: 'Your ledger is empty. Add your first task.'
+      };
+      listEl.innerHTML = '<div class="lg-empty"><div class="lg-empty-mark">&mdash;</div>' + (emptyMsgs[filter] || emptyMsgs.all) + '</div>';
+      return;
+    }
+
+    list.forEach(t => {
+      const item = document.createElement('div');
+      item.className = 'lg-item' + (t.done ? ' done' : '');
+      item.innerHTML =
+        '<div class="lg-check" data-id="' + t.id + '" data-action="toggle">' + checkIcon() + '</div>' +
+        '<div class="lg-body" data-id="' + t.id + '" data-action="edit">' +
+          '<div class="lg-item-title">' + escapeHtml(t.title) + '</div>' +
+          '<div class="lg-meta">' +
+            '<span class="lg-chip ' + catClass(t.category) + '">' + escapeHtml(t.category) + '</span>' +
+            '<span class="lg-chip pri-' + t.priority + '">' + t.priority + '</span>' +
+            dueLabel(t.due, t.done) +
+            remindLabel(t.remindAt) +
+          '</div>' +
+        '</div>' +
+        '<div class="lg-actions-col">' +
+          '<div class="lg-edit-icon" data-id="' + t.id + '" data-action="edit" title="Edit">&#9998;</div>' +
+          '<div class="lg-del" data-id="' + t.id + '" data-action="delete" title="Delete">&#10005;</div>' +
+        '</div>';
+      listEl.appendChild(item);
+    });
+  }
+
+  listEl.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-action]');
+    if (!target) return;
+    const id = target.dataset.id;
+    const action = target.dataset.action;
+    if (action === 'toggle') toggleDone(id);
+    else if (action === 'delete') { if (confirm('Remove this task?')) deleteTask(id); }
+    else if (action === 'edit') openSheet(id);
+  });
+
+  tabsEl.addEventListener('click', (e) => {
+    const tab = e.target.closest('.lg-tab');
+    if (!tab) return;
+    filter = tab.dataset.filter;
+    document.querySelectorAll('.lg-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    render();
+  });
+
+  searchInput.addEventListener('input', () => {
+    searchQuery = searchInput.value;
+    searchClear.style.display = searchQuery ? 'block' : 'none';
+    tabsEl.style.opacity = searchQuery ? '0.4' : '1';
+    render();
+  });
+  searchClear.addEventListener('click', () => {
+    searchQuery = '';
+    searchInput.value = '';
+    searchClear.style.display = 'none';
+    tabsEl.style.opacity = '1';
+    render();
+  });
+
+  // ---------- Add / Edit sheet ----------
+  function openSheet(id) {
+    const editing = id ? tasks.find(t => t.id === id) : null;
+    const overlay = document.createElement('div');
+    overlay.className = 'lg-overlay';
+    overlay.innerHTML =
+      '<div class="lg-sheet">' +
+        '<div class="lg-sheet-title">' + (editing ? 'Edit task' : 'New task') + '</div>' +
+        '<div class="lg-field"><label class="lg-label">Task</label>' +
+          '<div class="lg-input-with-mic">' +
+            '<input class="lg-input" id="sh-title" placeholder="What needs doing?" value="' + (editing ? escapeHtml(editing.title) : '') + '"/>' +
+            (speechSupported ? '<button type="button" class="lg-mic-inline" id="sh-mic">&#127908;</button>' : '') +
+          '</div></div>' +
+        '<div class="lg-field"><label class="lg-label">Notes (optional)</label>' +
+          '<textarea class="lg-textarea" id="sh-notes">' + (editing ? escapeHtml(editing.notes) : '') + '</textarea></div>' +
+        '<div class="lg-field"><label class="lg-label">Category</label>' +
+          '<div class="lg-cat-group" id="sh-cat-group">' +
+            CATS.map(c => '<div class="lg-cat-opt' + (editing && editing.category === c ? ' selected' : (!editing && c === 'Personal' ? ' selected' : '')) + '" data-val="' + c + '">' + c + '</div>').join('') +
+          '</div></div>' +
+        '<div class="lg-row">' +
+          '<div class="lg-field"><label class="lg-label">Due date</label>' +
+            '<input class="lg-input" type="date" id="sh-due" value="' + (editing ? editing.due : '') + '"/>' +
+            '<div class="lg-hint">Leave blank to keep it on today\'s list until done.</div></div>' +
+        '</div>' +
+        '<div class="lg-field"><label class="lg-label">Remind me at (optional)</label>' +
+          '<input class="lg-input" type="datetime-local" id="sh-remind" value="' + (editing && editing.remindAt ? editing.remindAt : '') + '"/>' +
+          '<div class="lg-hint">Needs this page open (foreground or background tab) at that time.</div></div>' +
+        '<div class="lg-field"><label class="lg-label">Priority</label>' +
+          '<div class="lg-pri-group" id="sh-pri">' +
+            '<div class="lg-pri-opt" data-val="low">Low</div>' +
+            '<div class="lg-pri-opt" data-val="med">Med</div>' +
+            '<div class="lg-pri-opt" data-val="high">High</div>' +
+          '</div></div>' +
+        '<div class="lg-sheet-actions">' +
+          '<button class="lg-btn-cancel" id="sh-cancel">Cancel</button>' +
+          '<button class="lg-btn-save" id="sh-save">' + (editing ? 'Save changes' : 'Add task') + '</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    let selectedPri = editing ? editing.priority : 'med';
+    let selectedCat = editing ? editing.category : 'Personal';
+
+    const priOpts = overlay.querySelectorAll('.lg-pri-opt');
+    function paintPri() {
+      priOpts.forEach(o => { o.classList.remove('sel-high', 'sel-med', 'sel-low'); if (o.dataset.val === selectedPri) o.classList.add('sel-' + selectedPri); });
+    }
+    paintPri();
+    priOpts.forEach(o => o.addEventListener('click', () => { selectedPri = o.dataset.val; paintPri(); }));
+
+    const catOpts = overlay.querySelectorAll('.lg-cat-opt');
+    catOpts.forEach(o => o.addEventListener('click', () => {
+      selectedCat = o.dataset.val;
+      catOpts.forEach(x => x.classList.remove('selected'));
+      o.classList.add('selected');
+    }));
+
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) document.body.removeChild(overlay); });
+    overlay.querySelector('#sh-cancel').addEventListener('click', () => document.body.removeChild(overlay));
+
+    const micBtn = overlay.querySelector('#sh-mic');
+    if (micBtn) {
+      micBtn.addEventListener('click', () => {
+        startDictation((transcript) => {
+          const titleInput = overlay.querySelector('#sh-title');
+          titleInput.value = transcript;
+        }, micBtn);
+      });
+    }
+
+    overlay.querySelector('#sh-save').addEventListener('click', () => {
+      const title = overlay.querySelector('#sh-title').value.trim();
+      if (!title) { showToast('Give the task a name first'); return; }
+      const remindAt = overlay.querySelector('#sh-remind').value;
+      const data = {
+        title, notes: overlay.querySelector('#sh-notes').value.trim(),
+        category: selectedCat, due: overlay.querySelector('#sh-due').value,
+        remindAt: remindAt, priority: selectedPri
+      };
+      if (remindAt) requestNotifPermission();
+      if (editing) updateTask(editing.id, data); else addTask(data);
+      document.body.removeChild(overlay);
+    });
+
+    setTimeout(() => overlay.querySelector('#sh-title').focus(), 50);
+  }
+
+  addBtn.addEventListener('click', () => openSheet(null));
+
+  // ---------- Voice: dictation helper ----------
+  function startDictation(onResult, btnEl) {
+    if (!speechSupported) { showToast('Voice input is not supported in this browser'); return; }
+    const rec = new SpeechRec();
+    rec.lang = 'en-US';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    if (btnEl) btnEl.classList.add('listening');
+    showToast('Listening...');
+    rec.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      onResult(transcript);
+    };
+    rec.onerror = () => showToast('Didn\'t catch that — try again');
+    rec.onend = () => { if (btnEl) btnEl.classList.remove('listening'); };
+    rec.start();
+  }
+
+  // ---------- Voice: command mode (add/delete/complete by speech) ----------
+  function bestMatch(phrase) {
+    const p = phrase.toLowerCase();
+    let best = null, bestScore = 0;
+    tasks.filter(t => !t.done).forEach(t => {
+      const title = t.title.toLowerCase();
+      let score = 0;
+      if (p.includes(title) || title.includes(p)) score = Math.max(title.length, p.length);
+      else {
+        const words = title.split(/\s+/);
+        words.forEach(w => { if (w.length > 2 && p.includes(w)) score += w.length; });
+      }
+      if (score > bestScore) { bestScore = score; best = t; }
+    });
+    return bestScore > 0 ? best : null;
+  }
+
+  function handleVoiceCommand(transcript) {
+    const t = transcript.trim();
+    const lower = t.toLowerCase();
+    if (/^(delete|remove)\b/.test(lower)) {
+      const rest = t.replace(/^(delete|remove)\b/i, '').trim();
+      const match = bestMatch(rest);
+      if (match) {
+        if (confirm('Delete "' + match.title + '"?')) deleteTask(match.id);
+      } else showToast('Couldn\'t find a matching task to delete');
+      return;
+    }
+    if (/^(complete|done|finish)\b/.test(lower)) {
+      const rest = t.replace(/^(complete|done|finish)\b/i, '').trim();
+      const match = bestMatch(rest);
+      if (match) { match.done = true; saveTasks(); render(); showToast('Marked "' + match.title + '" done'); }
+      else showToast('Couldn\'t find a matching task');
+      return;
+    }
+    // default: treat as "add"
+    let title = t.replace(/^add\s+(a\s+)?(task\s+)?(to\s+)?/i, '').trim();
+    if (!title) title = t;
+    addTask({ title, category: 'Personal', priority: 'med', due: '', remindAt: '' });
+    showToast('Added "' + title + '"');
+  }
+
+  voiceBtn.addEventListener('click', () => {
+    startDictation((transcript) => handleVoiceCommand(transcript), voiceBtn);
+  });
+
+  // ---------- Notifications ----------
+  function updateNotifBanner() {
+    if (!('Notification' in window)) { notifBanner.style.display = 'none'; return; }
+    notifBanner.style.display = (Notification.permission === 'default') ? 'flex' : 'none';
+  }
+  function requestNotifPermission() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+      Notification.requestPermission().then(updateNotifBanner);
+    }
+  }
+  notifEnableBtn.addEventListener('click', requestNotifPermission);
+  updateNotifBanner();
+
+  function checkReminders() {
+    const now = Date.now();
+    let changed = false;
+    tasks.forEach(t => {
+      if (!t.remindAt || t.reminded || t.done) return;
+      const remindTime = new Date(t.remindAt).getTime();
+      if (remindTime <= now) {
+        t.reminded = true;
+        changed = true;
+        triggerAlarm(t);
+      }
+    });
+    if (changed) saveTasks();
+  }
+  setInterval(checkReminders, 15000);
+  checkReminders();
+
+  // ---------- Alarm overlay: rings until Stop or Snooze ----------
+  function triggerAlarm(task) {
+    unlockAudio();
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try { new Notification('Task reminder', { body: task.title }); } catch (e) {}
+    }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'lg-alarm-overlay';
+    overlay.innerHTML =
+      '<div class="lg-alarm-card">' +
+        '<div class="lg-alarm-bell">&#128276;</div>' +
+        '<div class="lg-alarm-label">Reminder</div>' +
+        '<div class="lg-alarm-title">' + escapeHtml(task.title) + '</div>' +
+        '<div class="lg-alarm-actions">' +
+          '<button class="lg-alarm-snooze" id="alarm-snooze">Snooze 5 min</button>' +
+          '<button class="lg-alarm-stop" id="alarm-stop">Stop</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    playReminderTone();
+    const ringInterval = setInterval(() => {
+      playReminderTone();
+      if (navigator.vibrate) navigator.vibrate([250, 120, 250]);
+    }, 1400);
+
+    function cleanup() {
+      clearInterval(ringInterval);
+      if (overlay.parentNode) document.body.removeChild(overlay);
+    }
+
+    overlay.querySelector('#alarm-stop').addEventListener('click', cleanup);
+
+    overlay.querySelector('#alarm-snooze').addEventListener('click', () => {
+      cleanup();
+      const t = tasks.find(x => x.id === task.id);
+      if (t) {
+        const newTime = new Date(Date.now() + 5 * 60000);
+        const pad = n => String(n).padStart(2, '0');
+        t.remindAt = newTime.getFullYear() + '-' + pad(newTime.getMonth() + 1) + '-' + pad(newTime.getDate()) +
+                     'T' + pad(newTime.getHours()) + ':' + pad(newTime.getMinutes());
+        t.reminded = false;
+        saveTasks();
+        showToast('Snoozed for 5 minutes');
+      }
+    });
+  }
+
+  loadTasks();
+})();
+</script>
+</body>
+</html>
