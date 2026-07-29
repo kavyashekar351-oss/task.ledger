@@ -9,10 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="KavyBloom">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='16' fill='%232F3A2A'/%3E%3Cpath d='M25 50l15 15 35-35' stroke='%23EFF1EA' stroke-width='10' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
@@ -36,31 +33,16 @@
 
   #ledger-root {
     font-family: 'IBM Plex Mono', monospace;
+    background: var(--paper);
     color: var(--ink);
     min-height: 100vh;
     max-width: 480px;
     margin: 0 auto;
     padding: 0 0 110px 0;
     position: relative;
-  }
-
-  #ledger-root::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    max-width: 480px;
-    margin: 0 auto;
-    background: url('background.jpg') center 20% / cover no-repeat;
-    z-index: -2;
-  }
-  #ledger-root::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    max-width: 480px;
-    margin: 0 auto;
-    background: linear-gradient(180deg, rgba(239,241,234,0.88) 0%, rgba(239,241,234,0.93) 40%, rgba(239,241,234,0.96) 100%);
-    z-index: -1;
+    background-image: linear-gradient(var(--line) 1px, transparent 1px);
+    background-size: 100% 40px;
+    background-attachment: local;
   }
 
   .lg-header {
@@ -216,6 +198,10 @@
 
   .lg-hint { font-size: 10.5px; color: var(--ink-soft); margin-top: 4px; line-height: 1.5; }
 
+  .lg-repeat-field { padding: 10px 12px; background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; }
+  .lg-repeat-label { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+  .lg-repeat-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
+
   .lg-alarm-overlay {
     position: fixed; inset: 0; background: rgba(20,22,16,0.92); z-index: 50;
     display: flex; align-items: center; justify-content: center; padding: 20px;
@@ -267,6 +253,7 @@
     <div class="lg-sound-row">
       <button class="lg-sound-btn" id="lg-sound-btn">&#128264; Tap to enable reminder sound</button>
     </div>
+    <audio id="lg-keepalive" loop style="display:none;"></audio>
     <div class="lg-notif-banner" id="lg-notif-banner" style="display:none;">
       <span>Turn on notifications so reminders can alert you.</span>
       <button id="lg-notif-enable">Enable</button>
@@ -327,10 +314,19 @@
   document.addEventListener('click', unlockAudioAndNotify, { once: false });
   document.addEventListener('touchstart', unlockAudioAndNotify, { once: false });
 
+  const KEEPALIVE_AUDIO_B64 = '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';
+  const keepaliveEl = document.getElementById('lg-keepalive');
+  keepaliveEl.src = 'data:audio/wav;base64,' + KEEPALIVE_AUDIO_B64;
+  keepaliveEl.volume = 0.05;
+
+  function startKeepAlive() {
+    keepaliveEl.play().catch(() => {});
+  }
   const soundBtn = document.getElementById('lg-sound-btn');
   soundBtn.addEventListener('click', () => {
     unlockAudio();
     playReminderTone();
+    startKeepAlive();
     soundBtn.textContent = '\u2705 Reminder sound is on';
     soundBtn.classList.add('armed');
     requestNotifPermission();
@@ -375,7 +371,29 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       tasks = raw ? JSON.parse(raw) : [];
     } catch (e) { tasks = []; }
+    runDailyRollover();
     render();
+  }
+
+  const ROLLOVER_KEY = 'ledger-last-rollover';
+  function runDailyRollover() {
+    const today = todayStr();
+    const last = localStorage.getItem(ROLLOVER_KEY);
+    if (last === today) return false;
+    let changed = false;
+    tasks.forEach(t => {
+      if (t.repeatDaily) {
+        if (t.done) { t.done = false; changed = true; }
+        if (t.due) { t.due = today; changed = true; }
+        if (t.remindAt) {
+          const timePart = t.remindAt.split('T')[1];
+          if (timePart) { t.remindAt = today + 'T' + timePart; t.reminded = false; changed = true; }
+        }
+      }
+    });
+    localStorage.setItem(ROLLOVER_KEY, today);
+    if (changed) saveTasks();
+    return changed;
   }
   function saveTasks() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
@@ -386,6 +404,7 @@
     tasks.unshift({
       id: uid(), title: data.title, notes: data.notes || '', category: data.category,
       priority: data.priority, due: data.due || '', remindAt: data.remindAt || '',
+      repeatDaily: !!data.repeatDaily,
       reminded: false, done: false, createdAt: Date.now()
     });
     saveTasks(); render();
@@ -500,6 +519,7 @@
             '<span class="lg-chip pri-' + t.priority + '">' + t.priority + '</span>' +
             dueLabel(t.due, t.done) +
             remindLabel(t.remindAt) +
+            (t.repeatDaily ? '<span class="lg-chip lg-chip-repeat">&#8635; Daily</span>' : '') +
           '</div>' +
         '</div>' +
         '<div class="lg-actions-col">' +
@@ -570,6 +590,12 @@
         '<div class="lg-field"><label class="lg-label">Remind me at (optional)</label>' +
           '<input class="lg-input" type="datetime-local" id="sh-remind" value="' + (editing && editing.remindAt ? editing.remindAt : '') + '"/>' +
           '<div class="lg-hint">Needs this page open (foreground or background tab) at that time.</div></div>' +
+        '<div class="lg-field lg-repeat-field">' +
+          '<label class="lg-repeat-label">' +
+            '<input type="checkbox" id="sh-repeat" ' + (editing && editing.repeatDaily ? 'checked' : '') + '/>' +
+            '<span>Repeat every day</span>' +
+          '</label>' +
+          '<div class="lg-hint">Resets automatically each morning so it shows up again, even after you mark it done.</div></div>' +
         '<div class="lg-field"><label class="lg-label">Priority</label>' +
           '<div class="lg-pri-group" id="sh-pri">' +
             '<div class="lg-pri-opt" data-val="low">Low</div>' +
@@ -620,7 +646,8 @@
       const data = {
         title, notes: overlay.querySelector('#sh-notes').value.trim(),
         category: selectedCat, due: overlay.querySelector('#sh-due').value,
-        remindAt: remindAt, priority: selectedPri
+        remindAt: remindAt, priority: selectedPri,
+        repeatDaily: overlay.querySelector('#sh-repeat').checked
       };
       if (remindAt) requestNotifPermission();
       if (editing) updateTask(editing.id, data); else addTask(data);
@@ -711,6 +738,7 @@
   updateNotifBanner();
 
   function checkReminders() {
+    if (runDailyRollover()) render();
     const now = Date.now();
     let changed = false;
     tasks.forEach(t => {
@@ -731,7 +759,7 @@
   function triggerAlarm(task) {
     unlockAudio();
     if ('Notification' in window && Notification.permission === 'granted') {
-      try { new Notification('Task reminder', { body: task.title }); } catch (e) {}
+      try { new Notification('Task reminder', { body: task.title, vibrate: [300, 100, 300, 100, 300], requireInteraction: true }); } catch (e) {}
     }
 
     const overlay = document.createElement('div');
