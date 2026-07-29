@@ -101,6 +101,14 @@
     color: var(--ink-soft); font-size: 13px;
   }
 
+  .lg-sound-row { margin-top: 8px; }
+  .lg-sound-btn {
+    width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; padding: 8px;
+    border: 1px solid var(--rule); border-radius: 4px; background: var(--paper-raised); color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .lg-sound-btn.armed { background: var(--low); color: var(--paper); border-color: var(--low); }
+
   .lg-notif-banner {
     margin: 12px 4px 0 4px;
     padding: 10px 12px;
@@ -231,6 +239,9 @@
       <input class="lg-search" id="lg-search" type="text" placeholder="Search tasks..." />
       <span class="lg-search-clear" id="lg-search-clear" style="display:none;">&#10005;</span>
     </div>
+    <div class="lg-sound-row">
+      <button class="lg-sound-btn" id="lg-sound-btn">&#128264; Tap to enable reminder sound</button>
+    </div>
     <div class="lg-notif-banner" id="lg-notif-banner" style="display:none;">
       <span>Turn on notifications so reminders can alert you.</span>
       <button id="lg-notif-enable">Enable</button>
@@ -290,6 +301,15 @@
   }
   document.addEventListener('click', unlockAudioAndNotify, { once: false });
   document.addEventListener('touchstart', unlockAudioAndNotify, { once: false });
+
+  const soundBtn = document.getElementById('lg-sound-btn');
+  soundBtn.addEventListener('click', () => {
+    unlockAudio();
+    playReminderTone();
+    soundBtn.textContent = '\u2705 Reminder sound is on';
+    soundBtn.classList.add('armed');
+    requestNotifPermission();
+  });
 
   function playReminderTone() {
     if (!audioCtx) unlockAudio();
