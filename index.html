@@ -309,6 +309,12 @@
     unlockAudio();
     if (!audioUnlockedNotified && audioCtx && audioCtx.state === 'running') {
       audioUnlockedNotified = true;
+      startKeepAlive();
+      if (soundBtn) {
+        soundBtn.textContent = '\u2705 Reminder sound is on';
+        soundBtn.classList.add('armed');
+      }
+      requestNotifPermission();
     }
   }
   document.addEventListener('click', unlockAudioAndNotify, { once: false });
