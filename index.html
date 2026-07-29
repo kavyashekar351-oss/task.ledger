@@ -304,17 +304,16 @@
     }
     if (audioCtx.state === 'suspended') audioCtx.resume();
   }
-  let audioUnlockedNotified = false;
+  const SOUND_ARMED_KEY = 'ledger-sound-armed';
+  function isSoundArmedByUser() { return localStorage.getItem(SOUND_ARMED_KEY) === '1'; }
+
+  let soundArmedThisSession = false;
   function unlockAudioAndNotify() {
+    if (!isSoundArmedByUser() || soundArmedThisSession) return;
     unlockAudio();
-    if (!audioUnlockedNotified && audioCtx && audioCtx.state === 'running') {
-      audioUnlockedNotified = true;
+    if (audioCtx && audioCtx.state === 'running') {
+      soundArmedThisSession = true;
       startKeepAlive();
-      if (soundBtn) {
-        soundBtn.textContent = '\u2705 Reminder sound is on';
-        soundBtn.classList.add('armed');
-      }
-      requestNotifPermission();
     }
   }
   document.addEventListener('click', unlockAudioAndNotify, { once: false });
@@ -328,14 +327,39 @@
   function startKeepAlive() {
     keepaliveEl.play().catch(() => {});
   }
+  function stopKeepAlive() {
+    keepaliveEl.pause();
+  }
+
   const soundBtn = document.getElementById('lg-sound-btn');
+  function setSoundBtnArmed(isArmed) {
+    if (isArmed) {
+      soundBtn.textContent = '\u2705 Reminder sound is ON \u2014 tap to turn off';
+      soundBtn.classList.add('armed');
+    } else {
+      soundBtn.textContent = '\uD83D\uDD0A Tap to enable reminder sound';
+      soundBtn.classList.remove('armed');
+    }
+  }
+  if (isSoundArmedByUser()) setSoundBtnArmed(true);
+
   soundBtn.addEventListener('click', () => {
-    unlockAudio();
-    playReminderTone();
-    startKeepAlive();
-    soundBtn.textContent = '\u2705 Reminder sound is on';
-    soundBtn.classList.add('armed');
-    requestNotifPermission();
+    const currentlyArmed = isSoundArmedByUser();
+    if (currentlyArmed) {
+      localStorage.removeItem(SOUND_ARMED_KEY);
+      soundArmedThisSession = false;
+      stopKeepAlive();
+      setSoundBtnArmed(false);
+      showToast('Reminder sound turned off');
+    } else {
+      localStorage.setItem(SOUND_ARMED_KEY, '1');
+      unlockAudio();
+      playReminderTone();
+      startKeepAlive();
+      soundArmedThisSession = true;
+      setSoundBtnArmed(true);
+      requestNotifPermission();
+    }
   });
 
   function playReminderTone() {
